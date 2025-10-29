@@ -1,0 +1,48 @@
+[Unit]
+Description=Muninn Web Portal
+After=network.target
+Wants=network-online.target
+# Start after the assistant service
+After=muninn-assistant.service
+
+[Service]
+Type=simple
+User=bw
+WorkingDirectory=/home/bw/muninn/muninn-v3/muninn-modular
+Environment="FLASK_APP=web_portal.py"
+Environment="FLASK_ENV=production"
+Environment="PYTHONUNBUFFERED=1"
+
+# Ensure directories exist
+ExecStartPre=/bin/mkdir -p /home/bw/muninn/muninn-v3/recordings
+ExecStartPre=/bin/mkdir -p /home/bw/muninn/muninn-v3/muninn-modular/templates/static
+ExecStart=/usr/bin/python3 /home/bw/muninn/muninn-v3/muninn-modular/web_portal.py
+
+# Restart policy - restart on failure but with limits
+Restart=on-failure
+RestartSec=10
+# Give up after 5 failed attempts within 10 minutes
+StartLimitBurst=5
+StartLimitIntervalSec=600
+
+# Resource limits to prevent system exhaustion
+MemoryMax=256M
+MemoryHigh=200M
+CPUQuota=50%
+
+# Graceful shutdown handling
+TimeoutStopSec=15
+KillMode=mixed
+KillSignal=SIGTERM
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=muninn-web-portal
+
+# Security hardening (optional - comment out if causes issues)
+# PrivateTmp=true
+# NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

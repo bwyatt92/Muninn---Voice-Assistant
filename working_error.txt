@@ -1,0 +1,17 @@
+Oct 18 10:21:05 raspberrypi python3[68312]: 🔊 Playing: web_recording_Beau_20251011_153520.wav
+Oct 18 10:21:05 raspberrypi python3[68312]: ❌ Playback error: file does not start with RIFF id
+Oct 18 10:21:05 raspberrypi python3[68312]: ❌ Failed to play message from beau
+Oct 18 10:21:06 raspberrypi python3[68312]: Found 1 messages for dakota in SQLite database
+Oct 18 10:21:06 raspberrypi python3[68312]: 🗣️ Muninn says: 'Messages from Dakota.'
+Oct 18 10:21:09 raspberrypi python3[68312]: ✅ TTS playback completed!
+Oct 18 10:21:09 raspberrypi python3[68312]: 🎵 Playing message 1 from dakota: web_recording_Dakota_20251017_192128.wav
+Oct 18 10:21:09 raspberrypi python3[68312]: 🔊 Playing: web_recording_Dakota_20251017_192128.wav
+Oct 18 10:21:09 raspberrypi python3[68312]: ❌ Playback error: file does not start with RIFF id
+Oct 18 10:21:09 raspberrypi python3[68312]: ❌ Failed to play message from dakota
+Oct 18 10:21:10 raspberrypi python3[68312]: Found 1 messages for lizzie in SQLite database
+Oct 18 10:21:10 raspberrypi python3[68312]: 🗣️ Muninn says: 'Messages from Lizzie.'
+Oct 18 10:21:13 raspberrypi python3[68312]: ✅ TTS playback completed!
+Oct 18 10:21:13 raspberrypi python3[68312]: 🎵 Playing message 1 from lizzie: web_recording_Lizzie_20251017_191755.wav
+Oct 18 10:21:13 raspberrypi python3[68312]: 🔊 Playing: web_recording_Lizzie_20251017_191755.wav
+Oct 18 10:21:13 raspberrypi python3[68312]: ❌ Playback error: file does not start with RIFF id
+Oct 18 10:21:13 raspberrypi python3[68312]: ❌ Failed to play message from lizzie

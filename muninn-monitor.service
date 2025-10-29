@@ -1,0 +1,28 @@
+[Unit]
+Description=Muninn System Monitor
+After=network.target
+# Optional service - monitors system health
+
+[Service]
+Type=simple
+User=bw
+WorkingDirectory=/home/bw/muninn/muninn-v3/muninn-modular
+ExecStart=/usr/bin/python3 /home/bw/muninn/muninn-v3/muninn-modular/system_monitor.py 120
+
+# Restart policy
+Restart=on-failure
+RestartSec=30
+StartLimitBurst=3
+StartLimitIntervalSec=600
+
+# Resource limits (keep it lightweight)
+MemoryMax=128M
+CPUQuota=10%
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=muninn-monitor
+
+[Install]
+WantedBy=multi-user.target

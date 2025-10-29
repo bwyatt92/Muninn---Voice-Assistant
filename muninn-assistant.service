@@ -1,0 +1,49 @@
+[Unit]
+Description=Muninn Voice Assistant
+After=network.target sound.service
+Wants=network.target
+# Prevent system from shutting down until Muninn stops gracefully
+DefaultDependencies=no
+Conflicts=shutdown.target
+
+[Service]
+Type=simple
+User=bw
+Group=bw
+WorkingDirectory=/home/bw/muninn/muninn-v3/muninn-modular
+Environment=PATH=/home/bw/muninn/muninn/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+Environment=PYTHONPATH=/home/bw/muninn/muninn-v3/muninn-modular
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/home/bw/muninn/muninn/bin/python3 /home/bw/muninn/muninn-v3/muninn-modular/muninn.py
+
+# Restart policy - restart on failure but with limits
+Restart=on-failure
+RestartSec=10
+# Give up after 5 failed attempts within 10 minutes
+StartLimitBurst=5
+StartLimitIntervalSec=600
+
+# Resource limits to prevent system exhaustion
+MemoryMax=512M
+MemoryHigh=400M
+CPUQuota=80%
+
+# Graceful shutdown handling
+TimeoutStopSec=30
+KillMode=mixed
+KillSignal=SIGTERM
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=muninn-assistant
+
+# For hardware access (GPIO, audio)
+SupplementaryGroups=audio gpio
+
+# Security hardening (optional - comment out if causes issues)
+# PrivateTmp=true
+# NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

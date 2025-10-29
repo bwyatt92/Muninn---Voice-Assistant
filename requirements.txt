@@ -1,0 +1,23 @@
+# Muninn Modular Voice Assistant Requirements
+
+# Core Audio
+pyaudio>=0.2.11
+soundfile>=0.12.1
+librosa>=0.10.0
+numpy>=1.21.0
+
+# Voice Recognition
+vosk>=0.3.45
+
+# Wake Word Detection
+pvporcupine>=3.0.0
+
+# Web requests (for weather API)
+requests>=2.25.0
+
+# Text-to-Speech
+# Install KittenTTS manually:
+# pip install https://github.com/KittenML/KittenTTS/releases/download/0.1/kittentts-0.1.0-py3-none-any.whl
+
+# Note: The following are built-in Python modules and don't need installation:
+# wave, subprocess, tempfile, difflib, glob, shutil, os, sys, time, threading, typing, random, datetime, json, struct

@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Muninn - System Logs</title>
+    <link rel="stylesheet" href="https://unpkg.com/snes.css@1.0.1/dist/snes.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+        body {
+            font-family: 'Press Start 2P', monospace;
+            background: #000000;
+            color: #ffffff;
+            padding: 16px;
+            min-height: 100vh;
+            background-image:
+                radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.3) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(255, 119, 48, 0.3) 0%, transparent 50%);
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 24px;
+            padding: 20px;
+        }
+
+        .title {
+            font-size: 2rem;
+            color: #ffd700;
+            text-shadow:
+                2px 2px 0px #ff6b35,
+                4px 4px 0px #000000;
+            margin-bottom: 16px;
+        }
+
+        .nav-buttons {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+
+        .nes-btn {
+            font-family: 'Press Start 2P', monospace;
+            font-size: 0.6rem;
+        }
+
+        .controls-panel {
+            background: #ffffff;
+            color: #212529;
+            padding: 16px;
+            margin-bottom: 16px;
+            border: 4px solid #000;
+        }
+
+        .controls-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            align-items: center;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .control-label {
+            font-size: 0.6rem;
+            font-weight: bold;
+        }
+
+        .logs-window {
+            background: #000000;
+            border: 4px solid #ffffff;
+            padding: 16px;
+            min-height: 500px;
+            max-height: 70vh;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.7rem;
+            line-height: 1.6;
+        }
+
+        .log-line {
+            margin: 2px 0;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        .log-error {
+            color: #ff6b6b;
+        }
+
+        .log-warning {
+            color: #ffd93d;
+        }
+
+        .log-info {
+            color: #6bcf7f;
+        }
+
+        .log-debug {
+            color: #4ecdc4;
+        }
+
+        .log-timestamp {
+            color: #a8dadc;
+        }
+
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            background: #212529;
+            margin-bottom: 16px;
+            font-size: 0.6rem;
+        }
+
+        .status-connected {
+            color: #00ff00;
+            text-shadow: 0 0 4px #00ff00;
+        }
+
+        .status-disconnected {
+            color: #ff0000;
+            text-shadow: 0 0 4px #ff0000;
+        }
+
+        .status-paused {
+            color: #ffd700;
+            text-shadow: 0 0 4px #ffd700;
+        }
+
+        .scrollbar-style::-webkit-scrollbar {
+            width: 12px;
+        }
+
+        .scrollbar-style::-webkit-scrollbar-track {
+            background: #1a1a1a;
+        }
+
+        .scrollbar-style::-webkit-scrollbar-thumb {
+            background: #4a4a4a;
+            border: 2px solid #1a1a1a;
+        }
+
+        .scrollbar-style::-webkit-scrollbar-thumb:hover {
+            background: #6a6a6a;
+        }
+
+        select, input {
+            font-family: 'Press Start 2P', monospace;
+            font-size: 0.6rem;
+            padding: 8px;
+        }
+
+        .filter-input {
+            width: 100%;
+            padding: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.7rem;
+        }
+
+        .stats {
+            display: flex;
+            gap: 16px;
+            font-size: 0.6rem;
+        }
+
+        .stat-item {
+            color: #00ff00;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="title">📜 SYSTEM LOGS</div>
+        </div>
+
+        <div class="nav-buttons">
+            <a href="/"><button class="nes-btn">🏠 Home</button></a>
+            <button class="nes-btn is-primary" id="backToTop">⬆️ Top</button>
+        </div>
+
+        <div class="status-bar">
+            <div>
+                <span id="connectionStatus" class="status-disconnected">● DISCONNECTED</span>
+                <span style="margin-left: 16px;" id="streamStatus"></span>
+            </div>
+            <div class="stats">
+                <span class="stat-item">Lines: <span id="lineCount">0</span></span>
+                <span class="stat-item">Service: <span id="currentService">muninn-assistant</span></span>
+            </div>
+        </div>
+
+        <div class="controls-panel">
+            <div class="controls-grid">
+                <div class="control-group">
+                    <label class="control-label">Service:</label>
+                    <select id="serviceSelect" class="nes-select">
+                        <option value="muninn-assistant">Muninn Assistant</option>
+                        <option value="muninn-web-portal">Web Portal</option>
+                    </select>
+                </div>
+
+                <div class="control-group">
+                    <label class="control-label">Initial Lines:</label>
+                    <select id="linesSelect" class="nes-select">
+                        <option value="50">50 lines</option>
+                        <option value="100" selected>100 lines</option>
+                        <option value="200">200 lines</option>
+                        <option value="500">500 lines</option>
+                    </select>
+                </div>
+
+                <div class="control-group">
+                    <label class="control-label">Filter:</label>
+                    <input type="text" id="filterInput" class="filter-input" placeholder="Type to filter logs...">
+                </div>
+
+                <div class="control-group" style="display: flex; flex-direction: row; gap: 8px; align-items: flex-end;">
+                    <button class="nes-btn is-success" id="toggleStream">▶️ Start</button>
+                    <button class="nes-btn is-warning" id="pauseBtn">⏸️ Pause</button>
+                    <button class="nes-btn is-error" id="clearBtn">🗑️ Clear</button>
+                    <button class="nes-btn" id="downloadBtn">💾 Download</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="logs-window scrollbar-style" id="logsOutput">
+            <div class="log-line" style="color: #888;">Waiting to connect...</div>
+        </div>
+    </div>
+
+    <script>
+        let eventSource = null;
+        let isPaused = false;
+        let isStreaming = false;
+        let lineCount = 0;
+        let allLogs = [];
+        let filterText = '';
+
+        const logsOutput = document.getElementById('logsOutput');
+        const toggleBtn = document.getElementById('toggleStream');
+        const pauseBtn = document.getElementById('pauseBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const serviceSelect = document.getElementById('serviceSelect');
+        const linesSelect = document.getElementById('linesSelect');
+        const filterInput = document.getElementById('filterInput');
+        const connectionStatus = document.getElementById('connectionStatus');
+        const streamStatus = document.getElementById('streamStatus');
+        const lineCountEl = document.getElementById('lineCount');
+        const currentServiceEl = document.getElementById('currentService');
+        const backToTopBtn = document.getElementById('backToTop');
+
+        function updateConnectionStatus(status, message) {
+            if (status === 'connected') {
+                connectionStatus.textContent = '● CONNECTED';
+                connectionStatus.className = 'status-connected';
+            } else if (status === 'paused') {
+                connectionStatus.textContent = '● PAUSED';
+                connectionStatus.className = 'status-paused';
+            } else {
+                connectionStatus.textContent = '● DISCONNECTED';
+                connectionStatus.className = 'status-disconnected';
+            }
+            streamStatus.textContent = message || '';
+        }
+
+        function classifyLogLine(line) {
+            if (line.includes('ERROR') || line.includes('❌') || line.includes('Failed')) {
+                return 'log-error';
+            } else if (line.includes('WARNING') || line.includes('⚠️')) {
+                return 'log-warning';
+            } else if (line.includes('INFO') || line.includes('✅') || line.includes('✓')) {
+                return 'log-info';
+            } else if (line.includes('DEBUG')) {
+                return 'log-debug';
+            }
+            return '';
+        }
+
+        function addLogLine(line) {
+            allLogs.push(line);
+            lineCount++;
+            lineCountEl.textContent = lineCount;
+
+            // Apply filter
+            if (filterText && !line.toLowerCase().includes(filterText.toLowerCase())) {
+                return;
+            }
+
+            const logDiv = document.createElement('div');
+            logDiv.className = 'log-line ' + classifyLogLine(line);
+            logDiv.textContent = line;
+            logsOutput.appendChild(logDiv);
+
+            // Auto-scroll if not paused and near bottom
+            if (!isPaused && (logsOutput.scrollHeight - logsOutput.scrollTop - logsOutput.clientHeight < 100)) {
+                logsOutput.scrollTop = logsOutput.scrollHeight;
+            }
+
+            // Limit displayed lines to prevent memory issues (keep last 1000)
+            while (logsOutput.children.length > 1000) {
+                logsOutput.removeChild(logsOutput.firstChild);
+            }
+        }
+
+        function connectToStream() {
+            if (eventSource) {
+                eventSource.close();
+            }
+
+            const service = serviceSelect.value;
+            const lines = linesSelect.value;
+            currentServiceEl.textContent = service;
+
+            updateConnectionStatus('connecting', 'Connecting...');
+
+            eventSource = new EventSource(`/api/logs/stream?service=${service}&lines=${lines}`);
+
+            eventSource.onopen = () => {
+                updateConnectionStatus('connected', 'Streaming...');
+                isStreaming = true;
+                toggleBtn.textContent = '⏹️ Stop';
+                toggleBtn.className = 'nes-btn is-error';
+            };
+
+            eventSource.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+
+                    if (data.type === 'connected') {
+                        console.log('Connected to log stream:', data.service);
+                    } else if (data.type === 'log') {
+                        addLogLine(data.line);
+                    } else if (data.type === 'error') {
+                        addLogLine(`[ERROR] ${data.message}`);
+                    }
+                } catch (e) {
+                    console.error('Error parsing log data:', e);
+                }
+            };
+
+            eventSource.onerror = (error) => {
+                console.error('EventSource error:', error);
+                updateConnectionStatus('disconnected', 'Connection lost');
+                isStreaming = false;
+                toggleBtn.textContent = '▶️ Start';
+                toggleBtn.className = 'nes-btn is-success';
+                eventSource.close();
+            };
+        }
+
+        function disconnectStream() {
+            if (eventSource) {
+                eventSource.close();
+                eventSource = null;
+            }
+            updateConnectionStatus('disconnected', '');
+            isStreaming = false;
+            toggleBtn.textContent = '▶️ Start';
+            toggleBtn.className = 'nes-btn is-success';
+        }
+
+        function applyFilter() {
+            filterText = filterInput.value;
+            logsOutput.innerHTML = '';
+
+            allLogs.forEach(line => {
+                if (!filterText || line.toLowerCase().includes(filterText.toLowerCase())) {
+                    const logDiv = document.createElement('div');
+                    logDiv.className = 'log-line ' + classifyLogLine(line);
+                    logDiv.textContent = line;
+                    logsOutput.appendChild(logDiv);
+                }
+            });
+
+            logsOutput.scrollTop = logsOutput.scrollHeight;
+        }
+
+        // Event listeners
+        toggleBtn.addEventListener('click', () => {
+            if (isStreaming) {
+                disconnectStream();
+            } else {
+                connectToStream();
+            }
+        });
+
+        pauseBtn.addEventListener('click', () => {
+            isPaused = !isPaused;
+            if (isPaused) {
+                pauseBtn.textContent = '▶️ Resume';
+                pauseBtn.className = 'nes-btn is-success';
+                updateConnectionStatus('paused', 'Paused');
+            } else {
+                pauseBtn.textContent = '⏸️ Pause';
+                pauseBtn.className = 'nes-btn is-warning';
+                updateConnectionStatus('connected', 'Streaming...');
+                logsOutput.scrollTop = logsOutput.scrollHeight;
+            }
+        });
+
+        clearBtn.addEventListener('click', () => {
+            logsOutput.innerHTML = '';
+            allLogs = [];
+            lineCount = 0;
+            lineCountEl.textContent = '0';
+        });
+
+        downloadBtn.addEventListener('click', () => {
+            const service = serviceSelect.value;
+            const lines = linesSelect.value;
+            window.location.href = `/api/logs/download?service=${service}&lines=${lines}`;
+        });
+
+        serviceSelect.addEventListener('change', () => {
+            if (isStreaming) {
+                disconnectStream();
+                setTimeout(() => connectToStream(), 500);
+            }
+        });
+
+        filterInput.addEventListener('input', applyFilter);
+
+        backToTopBtn.addEventListener('click', () => {
+            logsOutput.scrollTop = 0;
+        });
+
+        // Auto-start streaming
+        connectToStream();
+    </script>
+</body>
+</html>

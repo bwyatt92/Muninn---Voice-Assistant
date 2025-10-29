@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/Users/gpg-mchristian/muninn-voice-archive/**)",
+      "Bash(cat \"C:\\Users\\gpg-mchristian\\muninn-voice-archive\\muninn-modular\\working_error.txt\")",
+      "Bash(chmod +x \"C:\\Users\\gpg-mchristian\\muninn-voice-archive\\muninn-modular\\diagnose_audio_files.sh\")"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

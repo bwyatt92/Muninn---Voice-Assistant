@@ -1,0 +1,52 @@
+(muninn) bw@raspberrypi:~/muninn/muninn-v3/muninn-modular $ sudo journalctl -u muninn-assistant -n 50 --no-pager
+Oct 18 09:49:35 raspberrypi systemd[1]: muninn-assistant.service: Failed with result 'exit-code'.
+Oct 18 09:49:45 raspberrypi systemd[1]: muninn-assistant.service: Scheduled restart job, restart counter is at 12.
+Oct 18 09:49:45 raspberrypi systemd[1]: Stopped muninn-assistant.service - Muninn Voice Assistant.
+Oct 18 09:49:45 raspberrypi (python3)[65914]: muninn-assistant.service: Failed to locate executable /home/bw/muninn/muninn-v3/venv/bin/python3: No such file or directory
+Oct 18 09:49:45 raspberrypi systemd[1]: Started muninn-assistant.service - Muninn Voice Assistant.
+Oct 18 09:49:45 raspberrypi (python3)[65914]: muninn-assistant.service: Failed at step EXEC spawning /home/bw/muninn/muninn-v3/venv/bin/python3: No such file or directory
+Oct 18 09:49:45 raspberrypi systemd[1]: muninn-assistant.service: Main process exited, code=exited, status=203/EXEC
+Oct 18 09:49:45 raspberrypi systemd[1]: muninn-assistant.service: Failed with result 'exit-code'.
+Oct 18 09:49:56 raspberrypi systemd[1]: muninn-assistant.service: Scheduled restart job, restart counter is at 13.
+Oct 18 09:49:56 raspberrypi systemd[1]: Stopped muninn-assistant.service - Muninn Voice Assistant.
+Oct 18 09:49:56 raspberrypi (python3)[65928]: muninn-assistant.service: Failed to locate executable /home/bw/muninn/muninn-v3/venv/bin/python3: No such file or directory
+Oct 18 09:49:56 raspberrypi (python3)[65928]: muninn-assistant.service: Failed at step EXEC spawning /home/bw/muninn/muninn-v3/venv/bin/python3: No such file or directory
+Oct 18 09:49:56 raspberrypi systemd[1]: Started muninn-assistant.service - Muninn Voice Assistant.
+Oct 18 09:49:56 raspberrypi systemd[1]: muninn-assistant.service: Main process exited, code=exited, status=203/EXEC
+Oct 18 09:49:56 raspberrypi systemd[1]: muninn-assistant.service: Failed with result 'exit-code'.
+Oct 18 09:50:06 raspberrypi systemd[1]: muninn-assistant.service: Scheduled restart job, restart counter is at 14.
+Oct 18 09:50:06 raspberrypi systemd[1]: Stopped muninn-assistant.service - Muninn Voice Assistant.
+Oct 18 09:50:06 raspberrypi (python3)[65929]: muninn-assistant.service: Failed to locate executable /home/bw/muninn/muninn-v3/venv/bin/python3: No such file or directory
+Oct 18 09:50:06 raspberrypi (python3)[65929]: muninn-assistant.service: Failed at step EXEC spawning /home/bw/muninn/muninn-v3/venv/bin/python3: No such file or directory
+Oct 18 09:50:06 raspberrypi systemd[1]: Started muninn-assistant.service - Muninn Voice Assistant.
+Oct 18 09:50:06 raspberrypi systemd[1]: muninn-assistant.service: Main process exited, code=exited, status=203/EXEC
+Oct 18 09:50:06 raspberrypi systemd[1]: muninn-assistant.service: Failed with result 'exit-code'.
+Oct 18 09:50:16 raspberrypi systemd[1]: muninn-assistant.service: Scheduled restart job, restart counter is at 15.
+Oct 18 09:50:16 raspberrypi systemd[1]: Stopped muninn-assistant.service - Muninn Voice Assistant.
+Oct 18 09:50:16 raspberrypi (python3)[65930]: muninn-assistant.service: Failed to locate executable /home/bw/muninn/muninn-v3/venv/bin/python3: No such file or directory
+Oct 18 09:50:16 raspberrypi (python3)[65930]: muninn-assistant.service: Failed at step EXEC spawning /home/bw/muninn/muninn-v3/venv/bin/python3: No such file or directory
+Oct 18 09:50:16 raspberrypi systemd[1]: Started muninn-assistant.service - Muninn Voice Assistant.
+Oct 18 09:50:16 raspberrypi systemd[1]: muninn-assistant.service: Main process exited, code=exited, status=203/EXEC
+Oct 18 09:50:16 raspberrypi systemd[1]: muninn-assistant.service: Failed with result 'exit-code'.
+Oct 18 09:50:26 raspberrypi systemd[1]: muninn-assistant.service: Scheduled restart job, restart counter is at 16.
+Oct 18 09:50:26 raspberrypi systemd[1]: Stopped muninn-assistant.service - Muninn Voice Assistant.
+Oct 18 09:50:26 raspberrypi (python3)[65942]: muninn-assistant.service: Failed to locate executable /home/bw/muninn/muninn-v3/venv/bin/python3: No such file or directory
+Oct 18 09:50:26 raspberrypi systemd[1]: Started muninn-assistant.service - Muninn Voice Assistant.
+Oct 18 09:50:26 raspberrypi (python3)[65942]: muninn-assistant.service: Failed at step EXEC spawning /home/bw/muninn/muninn-v3/venv/bin/python3: No such file or directory
+Oct 18 09:50:26 raspberrypi systemd[1]: muninn-assistant.service: Main process exited, code=exited, status=203/EXEC
+Oct 18 09:50:26 raspberrypi systemd[1]: muninn-assistant.service: Failed with result 'exit-code'.
+Oct 18 09:50:37 raspberrypi systemd[1]: muninn-assistant.service: Scheduled restart job, restart counter is at 17.
+Oct 18 09:50:37 raspberrypi systemd[1]: Stopped muninn-assistant.service - Muninn Voice Assistant.
+Oct 18 09:50:37 raspberrypi (python3)[65943]: muninn-assistant.service: Failed to locate executable /home/bw/muninn/muninn-v3/venv/bin/python3: No such file or directory
+Oct 18 09:50:37 raspberrypi systemd[1]: Started muninn-assistant.service - Muninn Voice Assistant.
+Oct 18 09:50:37 raspberrypi (python3)[65943]: muninn-assistant.service: Failed at step EXEC spawning /home/bw/muninn/muninn-v3/venv/bin/python3: No such file or directory
+Oct 18 09:50:37 raspberrypi systemd[1]: muninn-assistant.service: Main process exited, code=exited, status=203/EXEC
+Oct 18 09:50:37 raspberrypi systemd[1]: muninn-assistant.service: Failed with result 'exit-code'.
+Oct 18 09:50:47 raspberrypi systemd[1]: muninn-assistant.service: Scheduled restart job, restart counter is at 18.
+Oct 18 09:50:47 raspberrypi systemd[1]: Stopped muninn-assistant.service - Muninn Voice Assistant.
+Oct 18 09:50:47 raspberrypi (python3)[65944]: muninn-assistant.service: Failed to locate executable /home/bw/muninn/muninn-v3/venv/bin/python3: No such file or directory
+Oct 18 09:50:47 raspberrypi (python3)[65944]: muninn-assistant.service: Failed at step EXEC spawning /home/bw/muninn/muninn-v3/venv/bin/python3: No such file or directory
+Oct 18 09:50:47 raspberrypi systemd[1]: Started muninn-assistant.service - Muninn Voice Assistant.
+Oct 18 09:50:47 raspberrypi systemd[1]: muninn-assistant.service: Main process exited, code=exited, status=203/EXEC
+Oct 18 09:50:47 raspberrypi systemd[1]: muninn-assistant.service: Failed with result 'exit-code'.
+

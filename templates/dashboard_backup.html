@@ -1,0 +1,1527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Muninn - Your wish is my command</title>
+    <link rel="stylesheet" href="https://unpkg.com/snes.css@1.0.1/dist/snes.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+        body {
+            font-family: 'Press Start 2P', monospace;
+            background: #000000;
+            color: #ffffff;
+            padding: 16px;
+            min-height: 100vh;
+            background-image:
+                radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.3) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(255, 119, 48, 0.3) 0%, transparent 50%),
+                radial-gradient(circle at 40% 40%, rgba(120, 119, 198, 0.2) 0%, transparent 50%);
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .game-header {
+            text-align: center;
+            margin-bottom: 24px;
+            padding: 20px;
+        }
+
+        .game-title {
+            font-size: 2rem;
+            color: #ffd700;
+            text-shadow:
+                2px 2px 0px #ff6b35,
+                4px 4px 0px #000000;
+            margin-bottom: 8px;
+            letter-spacing: 2px;
+        }
+
+        .game-subtitle {
+            font-size: 0.7rem;
+            color: #00ff00;
+            text-shadow: 1px 1px 0px #000000;
+            margin-bottom: 16px;
+        }
+
+        .status-bar {
+            padding: 8px 16px;
+            margin-bottom: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.6rem;
+            background: #212529;
+        }
+
+        .status-connected {
+            color: #00ff00;
+            text-shadow: 0 0 4px #00ff00;
+        }
+
+        .status-error {
+            color: #ff0000;
+            text-shadow: 0 0 4px #ff0000;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .metric-window {
+            background: #ffffff;
+            color: #212529;
+        }
+
+        .window-title {
+            padding: 8px 12px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: #e9ecef;
+            border-bottom: 2px solid #6c757d;
+        }
+
+        .window-icon {
+            width: 16px;
+            height: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.6rem;
+        }
+
+        .window-content {
+            padding: 16px;
+        }
+
+        .metric-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            padding: 4px 0;
+            border-bottom: 1px dotted #6c757d;
+        }
+
+        .metric-row:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+
+        .metric-label {
+            font-size: 0.6rem;
+            color: #495057;
+        }
+
+        .metric-value {
+            font-size: 0.6rem;
+            color: #212529;
+            font-weight: bold;
+        }
+
+        .progress-container {
+            width: 100%;
+            height: 12px;
+            background: #e9ecef;
+            border: 2px inset #6c757d;
+            margin-top: 4px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            transition: width 0.5s ease;
+            position: relative;
+        }
+
+        .progress-good {
+            background: linear-gradient(90deg, #28a745, #20c997);
+        }
+        .progress-warning {
+            background: linear-gradient(90deg, #ffc107, #fd7e14);
+        }
+        .progress-danger {
+            background: linear-gradient(90deg, #dc3545, #e83e8c);
+        }
+
+        .progress-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: repeating-linear-gradient(
+                90deg,
+                transparent 0px,
+                transparent 2px,
+                rgba(255,255,255,0.3) 2px,
+                rgba(255,255,255,0.3) 4px
+            );
+        }
+
+        .action-panel {
+            margin-bottom: 16px;
+            background: #ffffff;
+            color: #212529;
+        }
+
+        .panel-title {
+            padding: 12px 16px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: #e9ecef;
+            border-bottom: 2px solid #6c757d;
+        }
+
+        .panel-content {
+            padding: 16px;
+        }
+
+        .button-row {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+
+        /* Recording Panel Specific Styles */
+        .recording-panel {
+            margin-bottom: 24px;
+        }
+
+        .recording-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .record-section {
+            padding: 16px;
+            background: #f8f9fa;
+            border: 2px inset #6c757d;
+            margin-bottom: 16px;
+        }
+
+        .record-button {
+            width: 100%;
+            padding: 16px !important;
+            font-size: 0.8rem !important;
+            margin-bottom: 12px;
+        }
+
+        .recording-status {
+            text-align: center;
+            padding: 12px;
+            font-size: 0.6rem;
+            margin: 8px 0;
+        }
+
+        .recording-active {
+            background: #dc3545;
+            color: #ffffff;
+            animation: pulse 1s infinite;
+        }
+
+        .recording-idle {
+            background: #6c757d;
+            color: #ffffff;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .audio-visualizer {
+            width: 100%;
+            height: 60px;
+            background: #000000;
+            border: 2px inset #6c757d;
+            display: flex;
+            align-items: end;
+            justify-content: center;
+            padding: 4px;
+            gap: 2px;
+            margin: 12px 0;
+        }
+
+        .visualizer-bar {
+            width: 4px;
+            background: #00ff00;
+            transition: height 0.1s ease;
+            min-height: 2px;
+        }
+
+        .family-selector {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 8px;
+            margin: 12px 0;
+        }
+
+        .family-button {
+            padding: 8px !important;
+            font-size: 0.5rem !important;
+            text-align: center;
+        }
+
+        .family-button.selected {
+            background: #28a745 !important;
+            border-color: #1e7e34 !important;
+        }
+
+        .message-list {
+            max-height: 300px;
+            overflow-y: auto;
+            background: #f8f9fa;
+            border: 2px inset #6c757d;
+            padding: 8px;
+        }
+
+        .message-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px;
+            border-bottom: 1px dotted #6c757d;
+            font-size: 0.6rem;
+        }
+
+        .message-item:last-child {
+            border-bottom: none;
+        }
+
+        .message-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .message-name {
+            font-weight: bold;
+            color: #007bff;
+        }
+
+        .message-date {
+            color: #6c757d;
+            font-size: 0.5rem;
+        }
+
+        .message-controls {
+            display: flex;
+            gap: 4px;
+        }
+
+        .mini-button {
+            padding: 4px 8px !important;
+            font-size: 0.5rem !important;
+            min-width: auto !important;
+        }
+
+        .upload-area {
+            border: 2px dashed #6c757d;
+            padding: 24px;
+            text-align: center;
+            background: #f8f9fa;
+            margin: 12px 0;
+            transition: all 0.3s ease;
+        }
+
+        .upload-area:hover {
+            border-color: #007bff;
+            background: #e7f3ff;
+        }
+
+        .upload-area.dragover {
+            border-color: #28a745;
+            background: #d4edda;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        /* Override SNES button colors for our theme */
+        .snes-btn {
+            font-family: 'Press Start 2P', monospace !important;
+            font-size: 0.6rem !important;
+            padding: 8px 16px !important;
+            min-width: 120px;
+        }
+
+        .snes-btn.is-primary {
+            background: #007bff !important;
+            border-color: #0056b3 !important;
+        }
+
+        .snes-btn.is-success {
+            background: #28a745 !important;
+            border-color: #1e7e34 !important;
+        }
+
+        .snes-btn.is-warning {
+            background: #ffc107 !important;
+            border-color: #d39e00 !important;
+            color: #212529 !important;
+        }
+
+        .snes-btn.is-error {
+            background: #dc3545 !important;
+            border-color: #bd2130 !important;
+        }
+
+        .snes-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        /* Modal styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+        }
+
+        .modal-content {
+            margin: 5% auto;
+            width: 90%;
+            max-width: 500px;
+            background: #ffffff;
+            color: #212529;
+        }
+
+        .modal-header {
+            padding: 12px 16px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #e9ecef;
+            border-bottom: 2px solid #6c757d;
+        }
+
+        .modal-close {
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 0.6rem;
+            color: #dc3545;
+            font-weight: bold;
+        }
+
+        .modal-body {
+            padding: 16px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 4px;
+            font-size: 0.6rem;
+            font-weight: bold;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.7rem;
+            border: 2px inset #6c757d;
+            background: #ffffff;
+            color: #212529;
+        }
+
+        .form-input:focus {
+            outline: none;
+            box-shadow: 0 0 4px #007bff;
+        }
+
+        .terminal {
+            background: #000000;
+            color: #00ff00;
+            padding: 12px;
+            height: 250px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.6rem;
+            text-shadow: 0 0 2px #00ff00;
+            margin-top: 12px;
+        }
+
+        .terminal-line {
+            margin-bottom: 2px;
+            line-height: 1.2;
+        }
+
+        .network-list {
+            background: #f8f9fa;
+            padding: 8px;
+            max-height: 200px;
+            overflow-y: auto;
+            margin-top: 12px;
+            font-size: 0.6rem;
+        }
+
+        .network-item {
+            padding: 8px;
+            border-bottom: 1px dotted #6c757d;
+            cursor: pointer;
+            transition: background 0.2s ease;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .network-item:hover {
+            background: #e9ecef;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border: 2px solid #6c757d;
+            border-top: 2px solid #007bff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+
+        .blink {
+            animation: blink 1s infinite;
+        }
+
+        @media (max-width: 768px) {
+            .metrics-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .game-title {
+                font-size: 1.5rem;
+            }
+
+            .button-row {
+                flex-direction: column;
+            }
+
+            .snes-btn {
+                width: 100% !important;
+            }
+
+            .family-selector {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Game-style Header -->
+        <header class="game-header">
+            <div class="game-title">MUNINN CONTROL PORTAL</div>
+            <div class="game-subtitle">SYSTEM MONITOR & VOICE ARCHIVE v3.0</div>
+        </header>
+
+        <!-- Status Bar -->
+        <div class="snes-container is-dark status-bar">
+            <div id="connectionStatus" class="status-connected">◉ SYSTEM ONLINE</div>
+            <div id="currentTime"></div>
+        </div>
+
+        <!-- Voice Recording & Archive Panel -->
+        <div class="snes-container action-panel recording-panel">
+            <div class="panel-title">
+                <span>🎙️ VOICE ARCHIVE SYSTEM</span>
+            </div>
+            <div class="panel-content">
+                <div class="recording-controls">
+                    <!-- Recording Section -->
+                    <div class="record-section">
+                        <h3 style="font-size: 0.7rem; margin-bottom: 12px; color: #495057;">📹 RECORD NEW MESSAGE</h3>
+
+                        <!-- Family Member Selection -->
+                        <div class="form-group">
+                            <label class="form-label">SELECT FAMILY MEMBER:</label>
+                            <div class="family-selector" id="familySelector">
+                                <!-- Family buttons will be populated by JavaScript -->
+                            </div>
+                        </div>
+
+                        <!-- Recording Controls -->
+                        <div class="button-row">
+                            <button id="recordButton" class="snes-btn is-error record-button" onclick="toggleRecording()">
+                                🔴 START RECORDING
+                            </button>
+                        </div>
+
+                        <!-- Recording Status -->
+                        <div id="recordingStatus" class="recording-status recording-idle">
+                            READY TO RECORD
+                        </div>
+
+                        <!-- Audio Visualizer -->
+                        <div class="audio-visualizer" id="audioVisualizer">
+                            <!-- Visualizer bars will be added by JavaScript -->
+                        </div>
+
+                        <!-- Recording Timer -->
+                        <div style="text-align: center; font-size: 0.6rem; color: #6c757d;">
+                            <span id="recordingTimer">00:00</span> / <span id="maxDuration">10:00</span>
+                        </div>
+                    </div>
+
+                    <!-- File Upload Section -->
+                    <div class="record-section">
+                        <h3 style="font-size: 0.7rem; margin-bottom: 12px; color: #495057;">📁 UPLOAD AUDIO FILE</h3>
+
+                        <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
+                            <div style="font-size: 0.6rem; margin-bottom: 8px;">
+                                📁 CLICK TO SELECT OR DRAG & DROP AUDIO FILES
+                            </div>
+                            <div style="font-size: 0.5rem; color: #6c757d;">
+                                SUPPORTED: WAV, MP3, M4A, OGG (Max 50MB)
+                            </div>
+                        </div>
+
+                        <input type="file" id="fileInput" class="file-input" accept="audio/*" multiple onchange="handleFileSelect(event)">
+
+                        <div class="button-row">
+                            <button class="snes-btn is-primary" onclick="uploadFiles()" id="uploadButton" disabled>
+                                📤 UPLOAD SELECTED FILES
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Message Archive Panel -->
+        <div class="snes-container action-panel">
+            <div class="panel-title">
+                <span>🗄️ MESSAGE ARCHIVE</span>
+            </div>
+            <div class="panel-content">
+                <div class="button-row">
+                    <button class="snes-btn is-primary" onclick="loadMessageList()">
+                        🔄 REFRESH ARCHIVE
+                    </button>
+                    <button class="snes-btn is-success" onclick="playAllMessages()">
+                        ▶️ PLAY ALL MESSAGES
+                    </button>
+                    <button class="snes-btn is-warning" onclick="exportArchive()">
+                        💾 EXPORT ARCHIVE
+                    </button>
+                </div>
+
+                <div class="message-list" id="messageList">
+                    <div style="text-align: center; color: #6c757d; padding: 20px; font-size: 0.6rem;">
+                        PRESS 'REFRESH ARCHIVE' TO LOAD MESSAGE LIST
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- System Metrics (Condensed) -->
+        <div class="metrics-grid">
+            <!-- CPU Window -->
+            <div class="snes-container metric-window">
+                <div class="window-title">
+                    <div class="window-icon">🔥</div>
+                    <span>PROCESSOR</span>
+                </div>
+                <div class="window-content" id="cpuMetrics">
+                    <div class="metric-row">
+                        <span class="metric-label">LOADING...</span>
+                        <span class="metric-value blink">█</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Memory Window -->
+            <div class="snes-container metric-window">
+                <div class="window-title">
+                    <div class="window-icon">💾</div>
+                    <span>MEMORY</span>
+                </div>
+                <div class="window-content" id="memoryMetrics">
+                    <div class="metric-row">
+                        <span class="metric-label">LOADING...</span>
+                        <span class="metric-value blink">█</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Storage Window -->
+            <div class="snes-container metric-window">
+                <div class="window-title">
+                    <div class="window-icon">💿</div>
+                    <span>STORAGE</span>
+                </div>
+                <div class="window-content" id="diskMetrics">
+                    <div class="metric-row">
+                        <span class="metric-label">LOADING...</span>
+                        <span class="metric-value blink">█</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Muninn Status Window -->
+            <div class="snes-container metric-window">
+                <div class="window-title">
+                    <div class="window-icon">🧙‍♂️</div>
+                    <span>MUNINN STATUS</span>
+                </div>
+                <div class="window-content" id="muninnStatus">
+                    <div class="metric-row">
+                        <span class="metric-label">SERVICE</span>
+                        <span class="metric-value" id="muninnServiceStatus">CHECKING...</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">MESSAGES</span>
+                        <span class="metric-value" id="muninnMessageCount">-</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">LAST ACTIVITY</span>
+                        <span class="metric-value" id="muninnLastActivity">-</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- System Logs Panel (Condensed) -->
+        <div class="snes-container action-panel">
+            <div class="panel-title">
+                <span>📜 SYSTEM LOGS</span>
+            </div>
+            <div class="panel-content">
+                <div class="button-row">
+                    <button class="snes-btn is-primary" onclick="loadLogs()">
+                        🔄 REFRESH LOGS
+                    </button>
+                </div>
+
+                <div class="snes-container is-inset">
+                    <div class="terminal" id="logContainer">
+                        <div class="terminal-line">MUNINN CONTROL PORTAL v3.0</div>
+                        <div class="terminal-line">© 2025 VOICE ARCHIVE SYSTEMS</div>
+                        <div class="terminal-line">READY FOR LOG DATA...</div>
+                        <div class="terminal-line blink">█</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recording Progress Modal -->
+    <div id="recordingModal" class="modal">
+        <div class="snes-container modal-content">
+            <div class="modal-header">
+                <span>🎙️ RECORDING IN PROGRESS</span>
+                <div class="modal-close" onclick="stopRecording()">×</div>
+            </div>
+            <div class="modal-body">
+                <div style="text-align: center; margin-bottom: 16px;">
+                    <div style="font-size: 0.8rem; margin-bottom: 8px;">Recording for: <span id="recordingFor">Unknown</span></div>
+                    <div style="font-size: 1.2rem; color: #dc3545; margin-bottom: 16px;">
+                        🔴 <span id="modalTimer">00:00</span>
+                    </div>
+                </div>
+
+                <div class="button-row">
+                    <button class="snes-btn is-error" onclick="stopRecording()">
+                        ⏹️ STOP RECORDING
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Preview Modal -->
+    <div id="previewModal" class="modal">
+        <div class="snes-container modal-content">
+            <div class="modal-header">
+                <span>🎧 PREVIEW YOUR RECORDING</span>
+                <div class="modal-close" onclick="cancelPreview()">×</div>
+            </div>
+            <div class="modal-body">
+                <div style="text-align: center; margin-bottom: 16px;">
+                    <div style="font-size: 0.8rem; margin-bottom: 8px;">Recording for: <span id="previewFor">Unknown</span></div>
+                    <div style="font-size: 0.6rem; color: #6c757d; margin-bottom: 16px;">
+                        Duration: <span id="previewDuration">00:00</span>
+                    </div>
+                </div>
+
+                <!-- Audio Player -->
+                <div style="background: #f8f9fa; padding: 16px; border: 2px inset #6c757d; margin-bottom: 16px;">
+                    <audio id="previewAudio" controls style="width: 100%; outline: none;">
+                        Your browser does not support audio playback.
+                    </audio>
+                </div>
+
+                <!-- Action Buttons -->
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                    <button class="snes-btn is-success" onclick="saveRecording()" style="width: 100%; padding: 12px !important;">
+                        💾 SAVE RECORDING
+                    </button>
+                    <button class="snes-btn is-warning" onclick="reRecord()" style="width: 100%; padding: 12px !important;">
+                        🔄 RE-RECORD
+                    </button>
+                    <button class="snes-btn is-error" onclick="cancelPreview()" style="width: 100%; padding: 12px !important;">
+                        ❌ CANCEL
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let mediaRecorder = null;
+        let audioChunks = [];
+        let recordingTimer = null;
+        let recordingStartTime = 0;
+        let selectedFamilyMember = null;
+        let selectedFiles = [];
+        let audioContext = null;
+        let analyser = null;
+        let visualizerBars = [];
+        let currentRecordingBlob = null;
+        let currentRecordingDuration = 0;
+
+        // Family members configuration
+        const familyMembers = [
+            'Dad', 'Mom', 'Brother', 'Sister', 'Grandma', 'Grandpa',
+            'Uncle', 'Aunt', 'Cousin', 'Friend', 'Other'
+        ];
+
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            updateClock();
+            setInterval(updateClock, 1000);
+
+            loadVitals();
+            setInterval(loadVitals, 30000); // Less frequent updates for lighter load
+
+            initializeFamilySelector();
+            initializeVisualizer();
+            setupDragAndDrop();
+            loadMessageList();
+        });
+
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('currentTime').textContent =
+                `${now.toLocaleDateString()} ${now.toLocaleTimeString()}`;
+        }
+
+        function initializeFamilySelector() {
+            const selector = document.getElementById('familySelector');
+            selector.innerHTML = '';
+
+            familyMembers.forEach(member => {
+                const button = document.createElement('button');
+                button.className = 'snes-btn family-button';
+                button.textContent = member.toUpperCase();
+                button.onclick = () => selectFamilyMember(member);
+                selector.appendChild(button);
+            });
+        }
+
+        function selectFamilyMember(member) {
+            selectedFamilyMember = member;
+
+            // Update button states
+            document.querySelectorAll('.family-button').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+
+            event.target.classList.add('selected');
+
+            // Enable recording if a member is selected
+            updateRecordButtonState();
+        }
+
+        function updateRecordButtonState() {
+            const recordButton = document.getElementById('recordButton');
+            const isRecording = mediaRecorder && mediaRecorder.state === 'recording';
+
+            if (isRecording) {
+                recordButton.textContent = '⏹️ STOP RECORDING';
+                recordButton.disabled = false;
+            } else if (selectedFamilyMember) {
+                recordButton.textContent = '🔴 START RECORDING';
+                recordButton.disabled = false;
+            } else {
+                recordButton.textContent = '🔴 SELECT FAMILY MEMBER FIRST';
+                recordButton.disabled = true;
+            }
+        }
+
+        function initializeVisualizer() {
+            const visualizer = document.getElementById('audioVisualizer');
+            visualizer.innerHTML = '';
+
+            // Create visualizer bars
+            for (let i = 0; i < 50; i++) {
+                const bar = document.createElement('div');
+                bar.className = 'visualizer-bar';
+                visualizer.appendChild(bar);
+                visualizerBars.push(bar);
+            }
+        }
+
+        async function toggleRecording() {
+            if (!selectedFamilyMember) {
+                alert('Please select a family member first!');
+                return;
+            }
+
+            if (mediaRecorder && mediaRecorder.state === 'recording') {
+                stopRecording();
+            } else {
+                startRecording();
+            }
+        }
+
+        async function startRecording() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+                // Setup audio context for visualization
+                audioContext = new AudioContext();
+                analyser = audioContext.createAnalyser();
+                const source = audioContext.createMediaStreamSource(stream);
+                source.connect(analyser);
+                analyser.fftSize = 256;
+
+                mediaRecorder = new MediaRecorder(stream);
+                audioChunks = [];
+
+                mediaRecorder.ondataavailable = (event) => {
+                    audioChunks.push(event.data);
+                };
+
+                mediaRecorder.onstop = () => {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                    currentRecordingBlob = audioBlob;
+                    currentRecordingDuration = Math.floor((Date.now() - recordingStartTime) / 1000);
+
+                    // Show preview modal instead of immediate upload
+                    showPreviewModal(audioBlob);
+
+                    // Clean up
+                    stream.getTracks().forEach(track => track.stop());
+                    if (audioContext) {
+                        audioContext.close();
+                        audioContext = null;
+                    }
+                };
+
+                mediaRecorder.start();
+                recordingStartTime = Date.now();
+
+                // Update UI
+                updateRecordButtonState();
+                document.getElementById('recordingStatus').textContent = `RECORDING FOR ${selectedFamilyMember.toUpperCase()}`;
+                document.getElementById('recordingStatus').className = 'recording-status recording-active';
+                document.getElementById('recordingFor').textContent = selectedFamilyMember;
+                document.getElementById('recordingModal').style.display = 'flex';
+
+                // Start timer and visualizer
+                startRecordingTimer();
+                startVisualizer();
+
+                // Auto-stop after 10 minutes
+                setTimeout(() => {
+                    if (mediaRecorder && mediaRecorder.state === 'recording') {
+                        stopRecording();
+                    }
+                }, 10 * 60 * 1000);
+
+            } catch (error) {
+                console.error('Error starting recording:', error);
+                alert('Could not access microphone. Please check permissions.');
+            }
+        }
+
+        function stopRecording() {
+            if (mediaRecorder && mediaRecorder.state === 'recording') {
+                mediaRecorder.stop();
+            }
+
+            // Update UI
+            updateRecordButtonState();
+            document.getElementById('recordingStatus').textContent = 'PROCESSING RECORDING...';
+            document.getElementById('recordingStatus').className = 'recording-status recording-idle';
+            document.getElementById('recordingModal').style.display = 'none';
+
+            // Stop timer and visualizer
+            stopRecordingTimer();
+            stopVisualizer();
+        }
+
+        function startRecordingTimer() {
+            recordingTimer = setInterval(() => {
+                const elapsed = Date.now() - recordingStartTime;
+                const seconds = Math.floor(elapsed / 1000);
+                const minutes = Math.floor(seconds / 60);
+                const remainingSeconds = seconds % 60;
+
+                const timeString = `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+                document.getElementById('recordingTimer').textContent = timeString;
+                document.getElementById('modalTimer').textContent = timeString;
+            }, 1000);
+        }
+
+        function stopRecordingTimer() {
+            if (recordingTimer) {
+                clearInterval(recordingTimer);
+                recordingTimer = null;
+            }
+            document.getElementById('recordingTimer').textContent = '00:00';
+        }
+
+        function startVisualizer() {
+            if (!analyser) return;
+
+            const bufferLength = analyser.frequencyBinCount;
+            const dataArray = new Uint8Array(bufferLength);
+
+            function updateVisualizer() {
+                if (!analyser) return;
+
+                analyser.getByteFrequencyData(dataArray);
+
+                // Update visualizer bars
+                const barWidth = bufferLength / visualizerBars.length;
+                visualizerBars.forEach((bar, index) => {
+                    const dataIndex = Math.floor(index * barWidth);
+                    const height = (dataArray[dataIndex] / 255) * 50;
+                    bar.style.height = `${Math.max(2, height)}px`;
+                });
+
+                if (mediaRecorder && mediaRecorder.state === 'recording') {
+                    requestAnimationFrame(updateVisualizer);
+                }
+            }
+
+            updateVisualizer();
+        }
+
+        function stopVisualizer() {
+            // Reset visualizer bars
+            visualizerBars.forEach(bar => {
+                bar.style.height = '2px';
+            });
+        }
+
+        function showPreviewModal(audioBlob) {
+            // Create URL for audio preview
+            const audioURL = URL.createObjectURL(audioBlob);
+            const previewAudio = document.getElementById('previewAudio');
+            previewAudio.src = audioURL;
+
+            // Update modal info
+            document.getElementById('previewFor').textContent = selectedFamilyMember;
+            const minutes = Math.floor(currentRecordingDuration / 60);
+            const seconds = currentRecordingDuration % 60;
+            document.getElementById('previewDuration').textContent =
+                `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+
+            // Show preview modal
+            document.getElementById('recordingModal').style.display = 'none';
+            document.getElementById('previewModal').style.display = 'flex';
+
+            // Update status
+            document.getElementById('recordingStatus').textContent = 'PREVIEW YOUR RECORDING';
+            document.getElementById('recordingStatus').className = 'recording-status recording-idle';
+        }
+
+        function saveRecording() {
+            if (!currentRecordingBlob) return;
+
+            // Hide preview modal
+            document.getElementById('previewModal').style.display = 'none';
+
+            // Upload the recording
+            uploadRecording(currentRecordingBlob);
+
+            // Clean up
+            const previewAudio = document.getElementById('previewAudio');
+            URL.revokeObjectURL(previewAudio.src);
+            previewAudio.src = '';
+            currentRecordingBlob = null;
+        }
+
+        function reRecord() {
+            // Clean up current recording
+            const previewAudio = document.getElementById('previewAudio');
+            URL.revokeObjectURL(previewAudio.src);
+            previewAudio.src = '';
+            currentRecordingBlob = null;
+
+            // Hide preview modal
+            document.getElementById('previewModal').style.display = 'none';
+
+            // Reset status
+            document.getElementById('recordingStatus').textContent = 'READY TO RECORD';
+            document.getElementById('recordingStatus').className = 'recording-status recording-idle';
+
+            // Start new recording immediately
+            setTimeout(() => {
+                startRecording();
+            }, 100);
+        }
+
+        function cancelPreview() {
+            // Clean up
+            const previewAudio = document.getElementById('previewAudio');
+            URL.revokeObjectURL(previewAudio.src);
+            previewAudio.src = '';
+            currentRecordingBlob = null;
+
+            // Hide modal
+            document.getElementById('previewModal').style.display = 'none';
+
+            // Reset status
+            document.getElementById('recordingStatus').textContent = 'READY TO RECORD';
+            document.getElementById('recordingStatus').className = 'recording-status recording-idle';
+        }
+
+        async function uploadRecording(audioBlob) {
+            if (!selectedFamilyMember) return;
+
+            const formData = new FormData();
+            formData.append('audio', audioBlob, `${selectedFamilyMember}_${Date.now()}.wav`);
+            formData.append('familyMember', selectedFamilyMember);
+            formData.append('description', `Birthday message from ${selectedFamilyMember}`);
+
+            try {
+                document.getElementById('recordingStatus').textContent = 'UPLOADING...';
+
+                const response = await fetch('/api/upload_recording', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    document.getElementById('recordingStatus').textContent = 'RECORDING SAVED SUCCESSFULLY!';
+                    setTimeout(() => {
+                        document.getElementById('recordingStatus').textContent = 'READY TO RECORD';
+                    }, 3000);
+
+                    // Refresh message list
+                    loadMessageList();
+                } else {
+                    throw new Error(result.error || 'Upload failed');
+                }
+
+            } catch (error) {
+                console.error('Upload error:', error);
+                document.getElementById('recordingStatus').textContent = 'UPLOAD FAILED - TRY AGAIN';
+                setTimeout(() => {
+                    document.getElementById('recordingStatus').textContent = 'READY TO RECORD';
+                }, 3000);
+            }
+        }
+
+        function setupDragAndDrop() {
+            const uploadArea = document.getElementById('uploadArea');
+
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.classList.add('dragover');
+            });
+
+            uploadArea.addEventListener('dragleave', () => {
+                uploadArea.classList.remove('dragover');
+            });
+
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+
+                const files = Array.from(e.dataTransfer.files);
+                handleFiles(files);
+            });
+        }
+
+        function handleFileSelect(event) {
+            const files = Array.from(event.target.files);
+            handleFiles(files);
+        }
+
+        function handleFiles(files) {
+            selectedFiles = files.filter(file => file.type.startsWith('audio/'));
+
+            if (selectedFiles.length === 0) {
+                alert('Please select audio files only.');
+                return;
+            }
+
+            // Update upload area text
+            const uploadArea = document.getElementById('uploadArea');
+            uploadArea.innerHTML = `
+                <div style="font-size: 0.6rem; margin-bottom: 8px;">
+                    📁 ${selectedFiles.length} AUDIO FILE(S) SELECTED
+                </div>
+                <div style="font-size: 0.5rem; color: #6c757d;">
+                    ${selectedFiles.map(f => f.name).join(', ')}
+                </div>
+            `;
+
+            // Enable upload button
+            document.getElementById('uploadButton').disabled = false;
+        }
+
+        async function uploadFiles() {
+            if (selectedFiles.length === 0) return;
+
+            const formData = new FormData();
+            selectedFiles.forEach((file, index) => {
+                formData.append(`files`, file);
+            });
+
+            try {
+                document.getElementById('uploadButton').textContent = '📤 UPLOADING...';
+                document.getElementById('uploadButton').disabled = true;
+
+                const response = await fetch('/api/upload_files', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    alert(`Successfully uploaded ${result.uploaded} file(s)`);
+
+                    // Reset upload area
+                    document.getElementById('uploadArea').innerHTML = `
+                        <div style="font-size: 0.6rem; margin-bottom: 8px;">
+                            📁 CLICK TO SELECT OR DRAG & DROP AUDIO FILES
+                        </div>
+                        <div style="font-size: 0.5rem; color: #6c757d;">
+                            SUPPORTED: WAV, MP3, M4A, OGG (Max 50MB)
+                        </div>
+                    `;
+
+                    selectedFiles = [];
+                    document.getElementById('fileInput').value = '';
+
+                    // Refresh message list
+                    loadMessageList();
+                } else {
+                    throw new Error(result.error || 'Upload failed');
+                }
+
+            } catch (error) {
+                console.error('Upload error:', error);
+                alert('Upload failed: ' + error.message);
+            } finally {
+                document.getElementById('uploadButton').textContent = '📤 UPLOAD SELECTED FILES';
+                document.getElementById('uploadButton').disabled = selectedFiles.length === 0;
+            }
+        }
+
+        async function loadMessageList() {
+            try {
+                const response = await fetch('/api/messages');
+                const data = await response.json();
+
+                const messageList = document.getElementById('messageList');
+
+                if (data.messages && data.messages.length > 0) {
+                    messageList.innerHTML = data.messages.map(msg => `
+                        <div class="message-item">
+                            <div class="message-info">
+                                <div class="message-name">${msg.person || 'Unknown'}</div>
+                                <div class="message-date">${new Date(msg.created_at || Date.now()).toLocaleString()}</div>
+                            </div>
+                            <div class="message-controls">
+                                <button class="snes-btn is-primary mini-button" onclick="playMessageInBrowser('${msg.id}')">
+                                    ▶️ PLAY
+                                </button>
+                                <button class="snes-btn is-error mini-button" onclick="deleteMessage('${msg.id}')">
+                                    🗑️ DEL
+                                </button>
+                            </div>
+                        </div>
+                    `).join('');
+
+                    // Update Muninn status
+                    document.getElementById('muninnMessageCount').textContent = data.messages.length;
+                } else {
+                    messageList.innerHTML = `
+                        <div style="text-align: center; color: #6c757d; padding: 20px; font-size: 0.6rem;">
+                            NO MESSAGES IN ARCHIVE
+                        </div>
+                    `;
+                    document.getElementById('muninnMessageCount').textContent = '0';
+                }
+
+            } catch (error) {
+                console.error('Error loading messages:', error);
+                document.getElementById('messageList').innerHTML = `
+                    <div style="text-align: center; color: #dc3545; padding: 20px; font-size: 0.6rem;">
+                        ERROR LOADING MESSAGES
+                    </div>
+                `;
+            }
+        }
+
+        async function playMessageInBrowser(messageId) {
+            try {
+                // Create audio element if it doesn't exist
+                let browserAudio = document.getElementById('browserAudioPlayer');
+                if (!browserAudio) {
+                    browserAudio = document.createElement('audio');
+                    browserAudio.id = 'browserAudioPlayer';
+                    browserAudio.controls = true;
+                    browserAudio.style.display = 'none';
+                    document.body.appendChild(browserAudio);
+                }
+
+                // Set audio source and play
+                browserAudio.src = `/api/get_audio/${messageId}`;
+                browserAudio.play();
+
+                // Visual feedback
+                const logContainer = document.getElementById('logContainer');
+                logContainer.innerHTML += `<div class="terminal-line">PLAYING MESSAGE: ${messageId}</div>`;
+                logContainer.scrollTop = logContainer.scrollHeight;
+
+            } catch (error) {
+                console.error('Error playing message:', error);
+                alert('Error playing message: ' + error.message);
+            }
+        }
+
+        async function playMessage(filePath) {
+            try {
+                const response = await fetch('/api/play_message', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ file_path: filePath })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Visual feedback
+                    const logContainer = document.getElementById('logContainer');
+                    logContainer.innerHTML += `<div class="terminal-line">PLAYING: ${filePath}</div>`;
+                    logContainer.scrollTop = logContainer.scrollHeight;
+                } else {
+                    alert('Failed to play message: ' + (result.error || 'Unknown error'));
+                }
+
+            } catch (error) {
+                console.error('Error playing message:', error);
+                alert('Error playing message');
+            }
+        }
+
+        async function playAllMessages() {
+            try {
+                const response = await fetch('/api/play_all_messages', {
+                    method: 'POST'
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    alert('Playing all messages...');
+                } else {
+                    alert('Failed to play messages: ' + (result.error || 'Unknown error'));
+                }
+
+            } catch (error) {
+                console.error('Error playing all messages:', error);
+                alert('Error playing messages');
+            }
+        }
+
+        async function deleteMessage(messageId) {
+            if (!confirm('Are you sure you want to delete this message?')) return;
+
+            try {
+                const response = await fetch('/api/delete_message', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ message_id: messageId })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    loadMessageList(); // Refresh the list
+                } else {
+                    alert('Failed to delete message: ' + (result.error || 'Unknown error'));
+                }
+
+            } catch (error) {
+                console.error('Error deleting message:', error);
+                alert('Error deleting message');
+            }
+        }
+
+        async function exportArchive() {
+            try {
+                const response = await fetch('/api/export_archive');
+                const blob = await response.blob();
+
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `muninn_archive_${new Date().toISOString().split('T')[0]}.zip`;
+                a.click();
+                window.URL.revokeObjectURL(url);
+
+            } catch (error) {
+                console.error('Error exporting archive:', error);
+                alert('Error exporting archive');
+            }
+        }
+
+        async function loadVitals() {
+            try {
+                const response = await fetch('/api/vitals');
+                const data = await response.json();
+
+                // Update connection status
+                document.getElementById('connectionStatus').innerHTML = '◉ SYSTEM ONLINE - LAST UPDATE: ' + new Date().toLocaleTimeString();
+                document.getElementById('connectionStatus').className = 'status-connected';
+
+                // Update condensed metrics
+                displayCondensedMetrics(data);
+
+            } catch (error) {
+                console.error('Error loading vitals:', error);
+                document.getElementById('connectionStatus').innerHTML = '◉ CONNECTION ERROR - RETRYING...';
+                document.getElementById('connectionStatus').className = 'status-error';
+            }
+        }
+
+        function displayCondensedMetrics(data) {
+            // CPU Metrics (condensed)
+            if (data.cpu && !data.cpu.error) {
+                const cpu = data.cpu;
+                document.getElementById('cpuMetrics').innerHTML = `
+                    <div class="metric-row">
+                        <span class="metric-label">USAGE</span>
+                        <span class="metric-value">${cpu.usage_percent.toFixed(1)}%</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">TEMP</span>
+                        <span class="metric-value">${cpu.temperature.toFixed(1)}°C</span>
+                    </div>
+                `;
+            }
+
+            // Memory Metrics (condensed)
+            if (data.memory && !data.memory.error) {
+                const mem = data.memory;
+                document.getElementById('memoryMetrics').innerHTML = `
+                    <div class="metric-row">
+                        <span class="metric-label">USAGE</span>
+                        <span class="metric-value">${mem.percent.toFixed(1)}%</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">FREE</span>
+                        <span class="metric-value">${formatBytes(mem.available)}</span>
+                    </div>
+                `;
+            }
+
+            // Disk Metrics (condensed)
+            if (data.disk && !data.disk.error) {
+                const disk = data.disk;
+                document.getElementById('diskMetrics').innerHTML = `
+                    <div class="metric-row">
+                        <span class="metric-label">USAGE</span>
+                        <span class="metric-value">${disk.percent.toFixed(1)}%</span>
+                    </div>
+                    <div class="metric-row">
+                        <span class="metric-label">FREE</span>
+                        <span class="metric-value">${formatBytes(disk.free)}</span>
+                    </div>
+                `;
+            }
+        }
+
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+        }
+
+        async function loadLogs() {
+            try {
+                const response = await fetch('/api/logs');
+                const data = await response.json();
+
+                const logContainer = document.getElementById('logContainer');
+
+                if (data.logs) {
+                    logContainer.innerHTML = data.logs.map(log =>
+                        `<div class="terminal-line">${log}</div>`
+                    ).join('');
+                    logContainer.scrollTop = logContainer.scrollHeight;
+                }
+
+            } catch (error) {
+                console.error('Error loading logs:', error);
+            }
+        }
+
+        // Initialize page
+        loadVitals();
+        setInterval(loadVitals, 30000);
+    </script>
+</body>
+</html>
