@@ -148,14 +148,14 @@ class MuninnVoiceAssistant:
                 if mute_pressed:
                     print("🔇 Mute button pressed - temporarily muting")
                     self.hardware_controller.set_status(StatusState.MUTED)
-                    time.sleep(2)  # Show muted state briefly
+                    time.sleep(1.0)  # Show muted state briefly (reduced from 2.0)
                     continue
 
                 wake_detected = self.wake_word_detector.listen_for_wake_word(timeout=30)
 
                 if wake_detected:
                     print("✅ Wake word detected!")
-                    time.sleep(0.2)
+                    time.sleep(0.1)  # Reduced from 0.2 for faster response
                     conversation_turns = 0  # Reset conversation counter
 
                     # Start conversation mode
@@ -169,7 +169,7 @@ class MuninnVoiceAssistant:
                         else:
                             # Brief pause before listening for follow-up
                             print("💬 Listening for follow-up command...")
-                            time.sleep(0.3)
+                            time.sleep(0.1)  # Reduced from 0.3 for faster response
 
                         # Set status for command listening
                         self.hardware_controller.set_status(StatusState.COMMAND_LISTENING)
@@ -224,7 +224,7 @@ class MuninnVoiceAssistant:
                                         print(f"💬 Command not understood, staying in conversation (turn {conversation_turns})")
                                         in_conversation = True
 
-                    time.sleep(0.2)
+                    time.sleep(0.1)  # Reduced from 0.2 for faster wake word listening
                 else:
                     print("⏰ Wake word timeout - trying again...")
 

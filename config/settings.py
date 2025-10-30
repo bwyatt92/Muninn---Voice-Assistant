@@ -22,9 +22,9 @@ class MuninnConfig:
     # TTS Configuration
     DEFAULT_VOICE = 'expr-voice-4-f'
 
-    # Conversational settings
-    CONVERSATION_TIMEOUT = 15  # seconds to stay in conversation mode
-    FOLLOW_UP_TIMEOUT = 8      # seconds to wait for follow-up command
+    # Conversational settings (optimized for faster response)
+    CONVERSATION_TIMEOUT = 12  # seconds to stay in conversation mode (reduced from 15)
+    FOLLOW_UP_TIMEOUT = 6      # seconds to wait for follow-up command (reduced from 8)
     MAX_CONVERSATION_TURNS = 5 # maximum consecutive commands before requiring wake word
 
     # Command patterns for fuzzy matching
@@ -38,10 +38,15 @@ class MuninnConfig:
         'time': ['time', 'clock', 'what time', 'what\'s the time', 'current time'],
         'weather': ['weather', 'temperature', 'forecast', 'how\'s the weather', 'what\'s the weather'],
         'play_last': ['play last', 'play recent', 'play recording', 'last recording', 'recent recording'],
-        'list': ['list', 'show', 'what messages', 'who has messages', 'message count'],
+        'list': ['list', 'show', 'what messages', 'who has messages', 'message count', 'what stories', 'who has stories'],
         'record_for': ['record for', 'record message for', 'save for'],
         'joke': ['joke', 'tell me a joke', 'tell a joke', 'make me laugh', 'funny', 'humor'],
-        'dad_joke': ['dad joke', 'tell me a dad joke', 'father joke', 'cheesy joke']
+        'dad_joke': ['dad joke', 'tell me a dad joke', 'father joke', 'cheesy joke'],
+        'story': ['story', 'stories', 'memory', 'memories', 'tale', 'tell me', 'hear'],
+        'record_story': ['record story', 'record a story', 'record memory', 'save story', 'capture story', 'record a memory'],
+        'get': ['get', 'got', 'give', 'give me', 'tell', 'hear', 'play'],
+        'length': ['short', 'long', 'quick', 'brief', 'medium'],
+        'story_type': ['advice', 'birthday', 'wisdom', 'lesson', 'funny']
     }
 
     # Family members with phonetic variations

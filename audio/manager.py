@@ -13,7 +13,7 @@ import pyaudio
 import json
 import sqlite3
 import numpy as np
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Any
 
 from config.settings import MuninnConfig
 
@@ -581,6 +581,231 @@ class AudioManager:
         except Exception:
             return 0.0
 
+    # Memory/Story methods for web portal integration
+    def get_memories_by_person(self, person: str, limit: Optional[int] = None) -> List[Dict]:
+        """Get stories/memories for a specific person from web portal"""
+        try:
+            if os.path.exists(self.messages_db):
+                conn = sqlite3.connect(self.messages_db)
+                conn.row_factory = sqlite3.Row
+                cursor = conn.cursor()
+
+                query = '''
+                    SELECT * FROM memories
+                    WHERE LOWER(person) = LOWER(?)
+                    ORDER BY created_at DESC
+                '''
+                params = [person]
+
+                if limit:
+                    query += ' LIMIT ?'
+                    params.append(limit)
+
+                cursor.execute(query, params)
+                rows = cursor.fetchall()
+                conn.close()
+
+                memories = [dict(row) for row in rows]
+                if memories:
+                    print(f"Found {len(memories)} stories for {person}")
+                return memories
+        except Exception as e:
+            print(f"Error reading memories: {e}")
+        return []
+
+    def get_memories_by_type(self, memory_type: str, limit: Optional[int] = None) -> List[Dict]:
+        """Get stories/memories by type (story, advice, birthday, etc.)"""
+        try:
+            if os.path.exists(self.messages_db):
+                conn = sqlite3.connect(self.messages_db)
+                conn.row_factory = sqlite3.Row
+                cursor = conn.cursor()
+
+                query = '''
+                    SELECT * FROM memories
+                    WHERE LOWER(memory_type) = LOWER(?)
+                    ORDER BY created_at DESC
+                '''
+                params = [memory_type]
+
+                if limit:
+                    query += ' LIMIT ?'
+                    params.append(limit)
+
+                cursor.execute(query, params)
+                rows = cursor.fetchall()
+                conn.close()
+
+                return [dict(row) for row in rows]
+        except Exception as e:
+            print(f"Error reading memories by type: {e}")
+        return []
+
+    def get_random_memory(self, person: Optional[str] = None, memory_type: Optional[str] = None,
+                         length_category: Optional[str] = None) -> Optional[Dict]:
+        """Get a random memory with optional filters"""
+        try:
+            if os.path.exists(self.messages_db):
+                conn = sqlite3.connect(self.messages_db)
+                conn.row_factory = sqlite3.Row
+                cursor = conn.cursor()
+
+                query = 'SELECT * FROM memories WHERE 1=1'
+                params = []
+
+                if person:
+                    query += ' AND LOWER(person) = LOWER(?)'
+                    params.append(person)
+
+                if memory_type:
+                    query += ' AND LOWER(memory_type) = LOWER(?)'
+                    params.append(memory_type)
+
+                if length_category:
+                    query += ' AND LOWER(length_category) = LOWER(?)'
+                    params.append(length_category)
+
+                query += ' ORDER BY RANDOM() LIMIT 1'
+
+                cursor.execute(query, params)
+                row = cursor.fetchone()
+                conn.close()
+
+                if row:
+                    print(f"Found random story: {row['title'] if row['title'] else 'Untitled'}")
+                    return dict(row)
+        except Exception as e:
+            print(f"Error getting random memory: {e}")
+        return None
+
+    def get_all_memories(self, limit: Optional[int] = None) -> List[Dict]:
+        """Get all stories/memories"""
+        try:
+            if os.path.exists(self.messages_db):
+                conn = sqlite3.connect(self.messages_db)
+                conn.row_factory = sqlite3.Row
+                cursor = conn.cursor()
+
+                query = 'SELECT * FROM memories ORDER BY created_at DESC'
+                if limit:
+                    query += f' LIMIT {limit}'
+
+                cursor.execute(query)
+                rows = cursor.fetchall()
+                conn.close()
+
+                return [dict(row) for row in rows]
+        except Exception as e:
+            print(f"Error reading all memories: {e}")
+        return []
+
+    def save_memory(self, person: str, memory_type: str, title: str, tags: str,
+                    file_path: str, length_category: str, duration: float = 0.0) -> bool:
+        """Save a recorded memory/story to the database
+
+        Args:
+            person: Who the memory is from
+            memory_type: Type of memory (story, advice, joke, wisdom)
+            title: Title/description of the memory
+            tags: Comma-separated tags
+            file_path: Path to the recorded audio file
+            length_category: Length category (short, medium, long)
+            duration: Duration in seconds (optional)
+
+        Returns:
+            True if saved successfully, False otherwise
+        """
+        try:
+            if os.path.exists(self.messages_db):
+                import uuid
+                conn = sqlite3.connect(self.messages_db)
+                cursor = conn.cursor()
+
+                # Generate unique ID
+                memory_id = str(uuid.uuid4())
+
+                # Get file size
+                file_size = os.path.getsize(file_path) if os.path.exists(file_path) else 0
+
+                # Insert the memory
+                cursor.execute('''
+                    INSERT INTO memories (id, person, memory_type, title, tags, length_category, file_path, duration, file_size)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ''', (memory_id, person, memory_type, title, tags, length_category, file_path, duration, file_size))
+
+                conn.commit()
+                conn.close()
+                print(f"✅ Saved memory: {title} from {person} (type: {memory_type}, {duration:.1f}s)")
+                return True
+            else:
+                print(f"❌ Database not found: {self.messages_db}")
+                return False
+        except Exception as e:
+            print(f"❌ Error saving memory: {e}")
+            return False
+
+    def get_memory_statistics(self) -> Dict[str, Any]:
+        """Get statistics about memories/stories for listing"""
+        try:
+            if os.path.exists(self.messages_db):
+                conn = sqlite3.connect(self.messages_db)
+                conn.row_factory = sqlite3.Row
+                cursor = conn.cursor()
+
+                # Get people with story counts
+                cursor.execute('''
+                    SELECT person, COUNT(*) as count
+                    FROM memories
+                    GROUP BY person
+                    ORDER BY person
+                ''')
+                people_counts = {row['person']: row['count'] for row in cursor.fetchall()}
+
+                # Get memory types with counts
+                cursor.execute('''
+                    SELECT memory_type, COUNT(*) as count
+                    FROM memories
+                    GROUP BY memory_type
+                    ORDER BY count DESC
+                ''')
+                type_counts = {row['memory_type']: row['count'] for row in cursor.fetchall()}
+
+                # Get length categories
+                cursor.execute('''
+                    SELECT length_category, COUNT(*) as count
+                    FROM memories
+                    GROUP BY length_category
+                    ORDER BY count DESC
+                ''')
+                length_counts = {row['length_category']: row['count'] for row in cursor.fetchall()}
+
+                # Get breakdown by person and type
+                cursor.execute('''
+                    SELECT person, memory_type, COUNT(*) as count
+                    FROM memories
+                    GROUP BY person, memory_type
+                    ORDER BY person, memory_type
+                ''')
+                person_type_breakdown = {}
+                for row in cursor.fetchall():
+                    person = row['person']
+                    if person not in person_type_breakdown:
+                        person_type_breakdown[person] = {}
+                    person_type_breakdown[person][row['memory_type']] = row['count']
+
+                conn.close()
+
+                return {
+                    'people': people_counts,
+                    'types': type_counts,
+                    'lengths': length_counts,
+                    'breakdown': person_type_breakdown,
+                    'total': sum(people_counts.values())
+                }
+        except Exception as e:
+            print(f"Error getting memory statistics: {e}")
+            return {'people': {}, 'types': {}, 'lengths': {}, 'breakdown': {}, 'total': 0}
+
 
 class MockAudioManager:
     """Mock audio manager for testing"""
@@ -642,6 +867,42 @@ class MockAudioManager:
     def get_message_count_by_person(self) -> Dict[str, int]:
         """Mock get message counts"""
         return {person: len(messages) for person, messages in self.mock_messages.items()}
+
+    def get_memories_by_person(self, person: str, limit: Optional[int] = None) -> List[Dict]:
+        """Mock get memories for person"""
+        mock_stories = [{"id": "1", "person": person, "memory_type": "story", "title": f"Mock story from {person}",
+                        "file_path": "/tmp/mock_story.wav", "duration": 30.0}]
+        return mock_stories[:limit] if limit else mock_stories
+
+    def get_memories_by_type(self, memory_type: str, limit: Optional[int] = None) -> List[Dict]:
+        """Mock get memories by type"""
+        return [{"id": "1", "memory_type": memory_type, "person": "dad", "title": f"Mock {memory_type}",
+                "file_path": "/tmp/mock_memory.wav"}]
+
+    def get_random_memory(self, person: Optional[str] = None, memory_type: Optional[str] = None,
+                         length_category: Optional[str] = None) -> Optional[Dict]:
+        """Mock get random memory"""
+        return {"id": "1", "person": person or "dad", "memory_type": memory_type or "story",
+                "title": "Mock random story", "file_path": "/tmp/mock_story.wav", "duration": 25.0}
+
+    def get_all_memories(self, limit: Optional[int] = None) -> List[Dict]:
+        """Mock get all memories"""
+        return [{"id": "1", "person": "dad", "memory_type": "story", "title": "Mock story",
+                "file_path": "/tmp/mock_story.wav"}]
+
+    def get_memory_statistics(self) -> Dict[str, Any]:
+        """Mock get memory statistics"""
+        return {
+            'people': {'dad': 2, 'mom': 3, 'carrie': 1},
+            'types': {'story': 4, 'advice': 2},
+            'lengths': {'short': 3, 'long': 3},
+            'breakdown': {
+                'dad': {'story': 1, 'advice': 1},
+                'mom': {'story': 2, 'advice': 1},
+                'carrie': {'story': 1}
+            },
+            'total': 6
+        }
 
 
 def get_audio_manager(audio_device_index: Optional[int] = None, audio: Optional[pyaudio.PyAudio] = None, mock_mode: bool = False) -> AudioManager:

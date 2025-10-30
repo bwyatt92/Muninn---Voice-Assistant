@@ -15,6 +15,10 @@ pvporcupine>=3.0.0
 # Web requests (for weather API)
 requests>=2.25.0
 
+# Fuzzy matching and phonetic algorithms
+rapidfuzz>=3.0.0
+jellyfish>=1.0.0
+
 # Text-to-Speech
 # Install KittenTTS manually:
 # pip install https://github.com/KittenML/KittenTTS/releases/download/0.1/kittentts-0.1.0-py3-none-any.whl

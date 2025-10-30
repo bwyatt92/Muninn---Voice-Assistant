@@ -55,6 +55,13 @@ class CommandProcessor:
             # After recording, return to wake word mode
             conversation_state['continue_conversation'] = False
 
+        elif intent == 'getMemory':
+            # Handle story/memory playback from web portal
+            story_type = slots.get('story')
+            person = slots.get('person')
+            length = slots.get('length')
+            self._handle_get_story(person=person, story_type=story_type, length=length)
+
         elif intent == 'stop':
             self._handle_stop()
             # Stop command ends conversation
@@ -71,6 +78,14 @@ class CommandProcessor:
 
         elif intent == 'listMessages':
             self._handle_list_messages()
+
+        elif intent == 'listStories':
+            self._handle_list_stories()
+
+        elif intent == 'recordStory':
+            self._handle_record_story()
+            # After recording workflow, return to wake word mode
+            conversation_state['continue_conversation'] = False
 
         elif intent == 'recordForPerson':
             person = slots.get('person', 'unknown')
@@ -309,6 +324,53 @@ class CommandProcessor:
             else:
                 self.tts_engine.speak(f"{person.title()} has {count} messages.")
 
+    def _handle_list_stories(self):
+        """Handle listing stories/memories command"""
+        stats = self.audio_manager.get_memory_statistics()
+
+        if stats['total'] == 0:
+            self.tts_engine.speak("There are no stories available yet.")
+            return
+
+        total = stats['total']
+        people_count = len(stats['people'])
+
+        # Overall summary
+        self.tts_engine.speak(f"I have {total} stories from {people_count} people.")
+
+        # Story types breakdown
+        if stats['types']:
+            type_summary = []
+            for story_type, count in stats['types'].items():
+                type_summary.append(f"{count} {story_type}")
+
+            if len(type_summary) > 1:
+                types_text = ", ".join(type_summary[:-1]) + f", and {type_summary[-1]}"
+            else:
+                types_text = type_summary[0]
+
+            self.tts_engine.speak(f"Including {types_text}.")
+
+        # Per-person breakdown
+        time.sleep(0.3)
+        for person, count in stats['people'].items():
+            person_types = stats['breakdown'].get(person, {})
+
+            if len(person_types) > 1:
+                # Multiple types for this person
+                type_list = []
+                for mem_type, type_count in person_types.items():
+                    type_list.append(f"{type_count} {mem_type}")
+
+                types_desc = ", ".join(type_list[:-1]) + f", and {type_list[-1]}"
+                self.tts_engine.speak(f"{person.title()} has {types_desc}.")
+            else:
+                # Single type
+                if count == 1:
+                    self.tts_engine.speak(f"{person.title()} has 1 story.")
+                else:
+                    self.tts_engine.speak(f"{person.title()} has {count} stories.")
+
     def _handle_record_for_person(self, person: str):
         """Handle recording a message for a specific person"""
         # Map common name variations to actual family member names (same as _handle_get_message)
@@ -390,6 +452,204 @@ class CommandProcessor:
             self.tts_engine.speak(joke)
 
         print(f"👨 Told dad joke: {joke}")
+
+    def _handle_get_story(self, person: Optional[str] = None, story_type: Optional[str] = None,
+                          length: Optional[str] = None):
+        """Handle playing stories/memories from web portal"""
+        # Map common name variations to actual family member names
+        if person:
+            name_mapping = {
+                'carrie': 'carrie', 'carey': 'carrie', 'carry': 'carrie', 'mom': 'carrie',
+                'cassie': 'cassie', 'cassidy': 'cassie', 'cass': 'cassie',
+                'scott': 'scott', 'scotty': 'scott',
+                'beau': 'beau', 'bo': 'beau',
+                'lizzie': 'lizzie', 'liz': 'lizzie', 'elizabeth': 'lizzie',
+                'jean': 'jean', 'jeanie': 'jean',
+                'nick': 'nick', 'nicholas': 'nick',
+                'dakota': 'dakota', 'kota': 'dakota',
+                'bea': 'bea', 'beatrice': 'bea',
+                'charlie': 'charlie', 'charles': 'charlie',
+                'allie': 'allie', 'ally': 'allie',
+                'luke': 'luke', 'lucas': 'luke',
+                'lyra': 'lyra', 'lira': 'lyra',
+                'tui': 'tui', 'tooi': 'tui',
+                'sevro': 'sevro', 'sev': 'sevro'
+            }
+            person = name_mapping.get(person.lower(), person.lower())
+
+        # Get a random story matching the filters
+        story = self.audio_manager.get_random_memory(
+            person=person,
+            memory_type=story_type,
+            length_category=length
+        )
+
+        if not story:
+            if person and story_type:
+                self.tts_engine.speak(f"I don't have any {story_type} stories from {person}.")
+            elif person:
+                self.tts_engine.speak(f"I don't have any stories from {person}.")
+            elif story_type:
+                self.tts_engine.speak(f"I don't have any {story_type} stories.")
+            else:
+                self.tts_engine.speak("I don't have any stories to play.")
+            return
+
+        # Announce the story
+        title = story.get('title', 'Untitled story')
+        story_person = story.get('person', 'Unknown')
+
+        if title and title != 'Untitled story':
+            self.tts_engine.speak(f"Playing {title} from {story_person}.")
+        else:
+            self.tts_engine.speak(f"Playing a story from {story_person}.")
+
+        # Wait for TTS to finish
+        time.sleep(0.5)
+
+        # Play the story
+        file_path = story.get('file_path')
+        if file_path and os.path.exists(file_path):
+            success = self.audio_manager.play_audio_file(file_path)
+            if not success:
+                self.tts_engine.speak("Sorry, I couldn't play that story.")
+        else:
+            self.tts_engine.speak("Sorry, the story file was not found.")
+
+    def _handle_record_story(self):
+        """Handle interactive story recording workflow"""
+        print("📖 Starting interactive story recording workflow")
+
+        # Step 1: Ask who the story is from
+        self.tts_engine.speak("Who is this story from?")
+        time.sleep(0.5)
+        person_result = self._get_voice_input(timeout=8)
+
+        if not person_result:
+            self.tts_engine.speak("I didn't hear that. Recording cancelled.")
+            return
+
+        person = person_result.upper()
+        print(f"Person: {person}")
+
+        # Step 2: Ask for memory type
+        self.tts_engine.speak("What type of memory is this? Say story, advice, joke, or wisdom.")
+        time.sleep(0.5)
+        type_result = self._get_voice_input(timeout=8)
+
+        memory_type = 'story'  # default
+        if type_result:
+            type_lower = type_result.lower()
+            if 'advice' in type_lower:
+                memory_type = 'advice'
+            elif 'joke' in type_lower or 'funny' in type_lower:
+                memory_type = 'joke'
+            elif 'wisdom' in type_lower or 'lesson' in type_lower:
+                memory_type = 'wisdom'
+            else:
+                memory_type = 'story'
+
+        print(f"Memory type: {memory_type}")
+
+        # Step 3: Ask for title
+        self.tts_engine.speak("What should I title this memory?")
+        time.sleep(0.5)
+        title_result = self._get_voice_input(timeout=10)
+
+        title = title_result if title_result else f"{person}'s {memory_type}"
+        print(f"Title: {title}")
+
+        # Step 4: Ask for tags (optional)
+        self.tts_engine.speak("Any tags for this memory? Say none if you don't want tags.")
+        time.sleep(0.5)
+        tags_result = self._get_voice_input(timeout=8)
+
+        tags = ""
+        if tags_result and 'none' not in tags_result.lower():
+            tags = tags_result
+            print(f"Tags: {tags}")
+
+        # Step 5: Record the actual story
+        self.tts_engine.speak(f"Ready to record {title}. I'll record for 60 seconds, or say stop to finish early.")
+        time.sleep(1.0)
+
+        # Record audio
+        recording_file = self.audio_manager.record_audio(duration=60)
+
+        if not recording_file:
+            self.tts_engine.speak("Sorry, there was an error with the recording.")
+            return
+
+        # Determine length category based on duration
+        try:
+            import wave
+            with wave.open(recording_file, 'rb') as wf:
+                frames = wf.getnframes()
+                rate = wf.getframerate()
+                duration = frames / float(rate)
+
+            if duration < 20:
+                length_category = 'short'
+            elif duration < 45:
+                length_category = 'medium'
+            else:
+                length_category = 'long'
+        except:
+            length_category = 'medium'
+            duration = 0
+
+        print(f"Duration: {duration:.1f}s, Category: {length_category}")
+
+        # Save to memories database
+        success = self.audio_manager.save_memory(
+            person=person,
+            memory_type=memory_type,
+            title=title,
+            tags=tags,
+            file_path=recording_file,
+            length_category=length_category,
+            duration=duration
+        )
+
+        if success:
+            self.tts_engine.speak(f"Perfect! I've saved {title} from {person}.")
+            print(f"✅ Story saved: {title}")
+        else:
+            self.tts_engine.speak("The recording was saved, but there was an error updating the database.")
+            print(f"⚠️ Recording saved but database update failed")
+
+    def _get_voice_input(self, timeout: int = 8) -> Optional[str]:
+        """Get voice input from user during interactive workflow"""
+        try:
+            import pyaudio
+            from speech import get_speech_recognizer
+
+            # Create PyAudio instance for the recognizer
+            audio = pyaudio.PyAudio()
+
+            # Create a temporary recognizer instance
+            recognizer = get_speech_recognizer(
+                vosk_model_path=MuninnConfig.VOSK_MODEL_PATH if hasattr(MuninnConfig, 'VOSK_MODEL_PATH') else "./vosk-model-small-en-us-0.15",
+                audio_device_index=None,
+                audio=audio,
+                mock_mode=False
+            )
+
+            result = recognizer.listen_for_command(timeout=timeout)
+
+            # Clean up PyAudio
+            audio.terminate()
+
+            if result.get('understood') or result.get('raw_text'):
+                # Extract the raw text from the recognition
+                return result.get('raw_text', '')
+
+            return None
+        except Exception as e:
+            print(f"Error getting voice input: {e}")
+            import traceback
+            traceback.print_exc()
+            return None
 
     def _handle_unknown_command(self):
         """Handle unknown/unrecognized commands"""

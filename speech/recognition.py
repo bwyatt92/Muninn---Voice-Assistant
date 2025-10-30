@@ -12,6 +12,14 @@ import vosk
 from typing import Dict, Any, Optional, List
 from difflib import SequenceMatcher
 
+try:
+    from rapidfuzz import fuzz, process
+    from jellyfish import soundex, metaphone
+    ADVANCED_MATCHING_AVAILABLE = True
+except ImportError:
+    ADVANCED_MATCHING_AVAILABLE = False
+    print("⚠️  rapidfuzz/jellyfish not available - using basic matching")
+
 from config.settings import MuninnConfig
 
 
@@ -76,8 +84,9 @@ class SpeechRecognizer:
                         print(f"🔍 Final analysis: '{all_text.strip()}'")
                         result = self._smart_fuzzy_match(all_text.strip())
                         if result['understood']:
+                            result['raw_text'] = all_text.strip()
                             return result
-                    return {'understood': False, 'intent': 'timeout', 'slots': {}}
+                    return {'understood': False, 'intent': 'timeout', 'slots': {}, 'raw_text': all_text.strip()}
 
                 try:
                     data = stream.read(self.chunk_size, exception_on_overflow=False)
@@ -94,6 +103,7 @@ class SpeechRecognizer:
                             command_result = self._smart_fuzzy_match(all_text.strip())
                             if command_result['understood'] and command_result['confidence'] > 0.7:
                                 print(f"🎯 High confidence match: {command_result}")
+                                command_result['raw_text'] = all_text.strip()
                                 return command_result
 
                             # Reset if too long
@@ -107,7 +117,7 @@ class SpeechRecognizer:
 
         except Exception as e:
             print(f"❌ Command listening error: {e}")
-            return {'understood': False, 'intent': 'error', 'slots': {}}
+            return {'understood': False, 'intent': 'error', 'slots': {}, 'raw_text': ''}
 
         finally:
             if stream:
@@ -123,6 +133,12 @@ class SpeechRecognizer:
         words = text_lower.split()
 
         print(f"🔍 Smart fuzzy matching: '{text_lower}'")
+
+        # Enhanced: Apply phonetic correction if available
+        if ADVANCED_MATCHING_AVAILABLE:
+            text_lower = self._apply_phonetic_corrections(text_lower)
+            words = text_lower.split()
+            print(f"🔊 After phonetic correction: '{text_lower}'")
 
         # Strategy 1: Exact phrase matching
         if self._contains_phrase(text_lower, ['play all birthday', 'all birthday message', 'play birthday message']):
@@ -156,30 +172,79 @@ class SpeechRecognizer:
                 'confidence': 0.95
             }
 
-        # Check for "play" + "memory" (specific to playback)
-        if has_play and 'memory' in text_lower:
+        # Strategy 3: Story/Memory commands (MOVED UP - Higher priority than messages)
+        has_story = self._fuzzy_contains_any(words, MuninnConfig.COMMAND_PATTERNS['story'])
+        has_get = self._fuzzy_contains_any(words, MuninnConfig.COMMAND_PATTERNS['get'])
+
+        # IMPORTANT: Check for RECORD commands FIRST before story playback
+        # "record a story" should NOT match getMemory intent
+        if 'record' in text_lower and (has_story or 'story' in text_lower or 'memory' in text_lower or 'memories' in text_lower):
+            print(f"🎯 Record story command detected")
             return {
                 'understood': True,
-                'intent': 'playLastRecording',
+                'intent': 'recordStory',
                 'slots': {},
                 'confidence': 0.95
             }
 
-        # Strategy 3: Person-specific messages (CHECK FIRST before "play all")
-        has_message = self._fuzzy_contains_any(words, MuninnConfig.COMMAND_PATTERNS['message'])
+        # Check for story keywords - this takes precedence over birthday messages
+        if has_story or 'story' in text_lower or 'stories' in text_lower or 'tale' in text_lower or (has_get and 'memory' in text_lower):
+            # Extract optional person
+            person = self._extract_family_member(words)
 
-        if has_play or has_message:
+            # Extract optional length (short, medium, long)
+            length = None
+            if 'short' in text_lower or 'quick' in text_lower or 'brief' in text_lower:
+                length = 'short'
+            elif 'long' in text_lower:
+                length = 'long'
+            elif 'medium' in text_lower:
+                length = 'medium'
+
+            # Extract optional story type (advice, birthday, etc.)
+            story_type = None
+            if 'advice' in text_lower:
+                story_type = 'advice'
+            elif 'wisdom' in text_lower or 'lesson' in text_lower:
+                story_type = 'wisdom'
+            elif 'funny' in text_lower:
+                story_type = 'funny'
+            # Note: Don't check for 'birthday' here as story type to avoid conflict
+
+            slots = {}
+            if person:
+                slots['person'] = person
+            if length:
+                slots['length'] = length
+            if story_type:
+                slots['story'] = story_type
+
+            print(f"🎯 Story request detected - person: {person}, type: {story_type}, length: {length}")
+
+            return {
+                'understood': True,
+                'intent': 'getMemory',
+                'slots': slots,
+                'confidence': 0.95  # High confidence for story requests
+            }
+
+        # Strategy 4: Person-specific BIRTHDAY messages (lower priority than stories)
+        has_message = self._fuzzy_contains_any(words, MuninnConfig.COMMAND_PATTERNS['message'])
+        has_birthday = self._fuzzy_contains_any(words, MuninnConfig.COMMAND_PATTERNS['birthday'])
+
+        # Only match birthday message if "message" or "birthday" keyword is present
+        if (has_play or has_message) and (has_message or has_birthday):
             person = self._extract_family_member(words)
             if person:
-                print(f"🎯 Detected person-specific request for: {person}")
+                print(f"🎯 Detected birthday message request for: {person}")
                 return {
                     'understood': True,
                     'intent': 'getMessage',
                     'slots': {'person': person},
-                    'confidence': 0.9  # Increased confidence for person-specific
+                    'confidence': 0.9
                 }
 
-        # Strategy 4: Command + target detection for "all messages" (ONLY if no person detected)
+        # Strategy 5: Command + target detection for "all messages" (ONLY if no person detected)
         has_all = self._fuzzy_contains_any(words, MuninnConfig.COMMAND_PATTERNS['all'])
         has_birthday = self._fuzzy_contains_any(words, MuninnConfig.COMMAND_PATTERNS['birthday'])
 
@@ -193,8 +258,10 @@ class SpeechRecognizer:
                 'confidence': 0.85
             }
 
-        # Strategy 5: Record commands (present tense = new recording)
-        # Only match if it's NOT a playback command
+        # Strategy 6: Record commands (REMOVED - now handled in Strategy 3)
+        # Record story/memory commands are now detected earlier to prevent conflict with getMemory
+
+        # Check for generic record commands (not story-related)
         has_record = self._fuzzy_contains_any(words, MuninnConfig.COMMAND_PATTERNS['record'])
 
         if has_record and not has_play:
@@ -219,7 +286,7 @@ class SpeechRecognizer:
                 'confidence': 0.9
             }
 
-        # Strategy 6: Time and Weather commands
+        # Strategy 7: Time and Weather commands
         if self._fuzzy_contains_any(words, MuninnConfig.COMMAND_PATTERNS['time']) or 'time' in text_lower:
             return {
                 'understood': True,
@@ -238,9 +305,20 @@ class SpeechRecognizer:
 
         # Note: playLastRecording is now handled in Strategy 2 above
 
-        # Strategy 7: List messages command
+        # Strategy 8: List commands
         # Be more strict - only match if we have explicit "list" or "show" keywords
-        has_list_keyword = 'list' in text_lower or 'show' in text_lower
+        has_list_keyword = 'list' in text_lower or 'show' in text_lower or 'what' in text_lower
+
+        # List stories (check for story-related keywords)
+        if has_list_keyword and (has_story or 'stories' in text_lower):
+            return {
+                'understood': True,
+                'intent': 'listStories',
+                'slots': {},
+                'confidence': 0.9
+            }
+
+        # List messages
         if has_list_keyword and has_message:
             return {
                 'understood': True,
@@ -249,7 +327,7 @@ class SpeechRecognizer:
                 'confidence': 0.9
             }
 
-        # Strategy 8: Record for specific person
+        # Strategy 9: Record for specific person
         if self._fuzzy_contains_any(words, MuninnConfig.COMMAND_PATTERNS['record_for']):
             person = self._extract_family_member(words)
             if person:
@@ -260,7 +338,7 @@ class SpeechRecognizer:
                     'confidence': 0.9
                 }
 
-        # Strategy 9: Joke commands
+        # Strategy 10: Joke commands
         if self._fuzzy_contains_any(words, MuninnConfig.COMMAND_PATTERNS['dad_joke']) or ('dad' in text_lower and 'joke' in text_lower):
             return {
                 'understood': True,
@@ -299,7 +377,7 @@ class SpeechRecognizer:
         return False
 
     def _extract_family_member(self, words: List[str]) -> Optional[str]:
-        """Extract family member name using fuzzy matching"""
+        """Extract family member name using fuzzy and phonetic matching"""
         best_match = None
         best_score = 0.0
         best_word = None
@@ -311,9 +389,24 @@ class SpeechRecognizer:
                         print(f"👨‍👩‍👧‍👦 Exact family match: '{word}' → {family_name}")
                         return family_name
 
+                    # Basic fuzzy matching
                     similarity = SequenceMatcher(None, word, variation).ratio()
-                    # Increased threshold from 0.7 to 0.75 for better accuracy
-                    if similarity >= 0.75 and similarity > best_score:
+
+                    # Enhanced: Add phonetic matching if available
+                    if ADVANCED_MATCHING_AVAILABLE:
+                        try:
+                            fuzzy_score = fuzz.ratio(word, variation) / 100.0
+                            phonetic_same = soundex(word) == soundex(variation)
+                            phonetic_score = 1.0 if phonetic_same else 0.0
+
+                            # Weighted combination: fuzzy 60%, phonetic 40%
+                            similarity = (fuzzy_score * 0.6) + (phonetic_score * 0.4)
+                        except:
+                            pass  # Fall back to basic similarity
+
+                    # Reduced threshold to 0.65 with phonetic matching
+                    threshold = 0.65 if ADVANCED_MATCHING_AVAILABLE else 0.75
+                    if similarity >= threshold and similarity > best_score:
                         best_match = family_name
                         best_score = similarity
                         best_word = word
@@ -324,6 +417,74 @@ class SpeechRecognizer:
 
         print(f"⚠️  No family member found in: {words}")
         return None
+
+    def _apply_phonetic_corrections(self, text: str) -> str:
+        """Apply phonetic corrections to common misheard phrases"""
+        if not ADVANCED_MATCHING_AVAILABLE:
+            return text
+
+        # Common command misheard patterns
+        corrections = {
+            # Story commands - CRITICAL for "get a gumbo" → "from beau"
+            'gumbo': 'from beau',
+            'combo': 'from beau',
+            'jumbo': 'from beau',
+
+            # Action words
+            'plate': 'play',
+            'plates': 'play',
+            'clay': 'play',
+            'pale': 'play',
+
+            # Story words
+            'torah': 'story',
+            'sorry': 'story',
+            'storing': 'story',
+
+            # People
+            'bow': 'beau',
+            'bough': 'beau',
+            'bo': 'beau',
+
+            # From/for confusion
+            'form': 'from',
+            'firm': 'from',
+            'four': 'from',
+        }
+
+        text_words = text.split()
+        corrected_words = []
+        skip_next = 0
+
+        for i, word in enumerate(text_words):
+            if skip_next > 0:
+                skip_next -= 1
+                continue
+
+            corrected = word
+
+            # Direct single-word replacement
+            if word in corrections:
+                replacement = corrections[word]
+                if ' ' in replacement:
+                    # Multi-word replacement
+                    corrected_words.extend(replacement.split())
+                    continue
+                else:
+                    corrected = replacement
+
+            # Context-aware: "get a gumbo" pattern
+            if i >= 2 and word in ['gumbo', 'combo', 'jumbo']:
+                # Check if preceded by "get/got a" or similar
+                if text_words[i-1] in ['a', 'the'] and text_words[i-2] in ['get', 'got', 'give', 'play']:
+                    # Replace "a gumbo" with "from beau"
+                    corrected_words.pop()  # Remove 'a'
+                    corrected_words.extend(['from', 'beau'])
+                    continue
+
+            corrected_words.append(corrected)
+
+        return ' '.join(corrected_words)
 
 
 class MockSpeechRecognizer:
@@ -342,7 +503,8 @@ class MockSpeechRecognizer:
             'understood': True,
             'intent': 'getTime',
             'slots': {},
-            'confidence': 0.9
+            'confidence': 0.9,
+            'raw_text': 'what time is it'
         }
 
 
